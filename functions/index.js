@@ -26,7 +26,49 @@ const app = express();
 // Collection
 const screamsCollection = 'screams';
 
-app.get('/screams', async (req, res) => {
+const { validSignUp, validLogin } = require('./validate');
+const { validationResult } = require('express-validator');
+
+// auth
+const auth = (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer ')
+  ) {
+    token = req.headers.authorization.split('Bearer ')[1];
+  } else {
+    return res.status(401).json({ message: 'No token, authorization denied' });
+  }
+
+  admin
+    .auth()
+    .verifyIdToken(token)
+    .then((decodedToken) => {
+      req.user = decodedToken;
+      return db
+        .collection('users')
+        .where('userId', '==', req.user.uid)
+        .limit(1)
+        .get();
+    })
+    .then((data) => {
+      req.user.handle = data.docs[0].data().handle;
+      console.log(data.docs[0].data());
+      return next();
+    })
+    .catch((err) => {
+      if (err.code === 'auth/argument-error') {
+        return res.status(401).json({ message: 'Token is not valid' });
+      }
+      if (err.code === 'auth/id-token-expired') {
+        return res.status(401).json({ message: 'Token is expired' });
+      }
+      return res.status(401).json({ message: err.code });
+    });
+};
+
+app.get('/screams', auth, async (req, res) => {
   try {
     const data = await db
       .collection(screamsCollection)
@@ -37,45 +79,45 @@ app.get('/screams', async (req, res) => {
       screams.push({
         screamId: doc.id,
         body: doc.data().body,
-        userHandle: doc.data().userHandle,
+        handle: doc.data().handle,
         createdAt: doc.data().createdAt,
       })
     );
     return res.status(200).json(screams);
   } catch (err) {
     console.error(err.message);
-    return res.status(500).send('Server Error');
+    return res.status(500).json({ message: 'Server Error' });
   }
 });
 
-app.post('/screams', async (req, res) => {
+app.post('/screams', auth, async (req, res) => {
   try {
-    const { body, userHandle } = req.body;
+    const { body } = req.body;
     const newStream = {
       body,
-      userHandle,
+      handle: req.user.handle,
       createdAt: new Date().toISOString(),
     };
+    console.log('asdasdasd');
     await db.collection(screamsCollection).add(newStream);
     return res.json({ message: 'Add success!' });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).send('Server Error');
+    return res.status(500).json({ message: 'Server Error' });
   }
 });
 
 app.put('/screams/:id', async (req, res) => {
   try {
-    const { body, userHandle } = req.body;
+    const { body } = req.body;
     const newStream = {
       body,
-      userHandle,
     };
     await db.collection(screamsCollection).doc(req.params.id).update(newStream);
     return res.json({ message: 'Update success!' });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).send('Server Error');
+    return res.status(500).json({ message: 'Server Error' });
   }
 });
 
@@ -85,7 +127,59 @@ app.delete('/screams/:id', async (req, res) => {
     return res.json({ message: 'Delete success!' });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).send('Server Error');
+    return res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+app.post('/signup', validSignUp, async (req, res) => {
+  try {
+    const { email, password, passwordConfirm, handle } = req.body;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    if (password !== passwordConfirm) {
+      return res.status(400).json({ error: 'Password does not match!' });
+    }
+    const data = await firebase
+      .auth()
+      .createUserWithEmailAndPassword(email, password);
+    const token = await data.user.getIdToken();
+    await db.collection('users').add({
+      userId: data.user.uid,
+      handle,
+      email,
+      password,
+      createdAt: new Date().toISOString(),
+    });
+    return res.status(201).json({ token });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/login', validLogin, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    const data = await firebase
+      .auth()
+      .signInWithEmailAndPassword(email, password);
+    const token = await data.user.getIdToken();
+    return res.json({ token });
+  } catch (err) {
+    console.error(err.code);
+    if (
+      err.code === 'auth/user-not-found' ||
+      err.code === 'auth/wrong-password'
+    ) {
+      return res.status(403).json({ message: 'Invalid credentials!' });
+    }
+    return res.status(500).json({ message: err.code });
   }
 });
 
