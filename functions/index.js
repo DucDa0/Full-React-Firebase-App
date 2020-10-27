@@ -9,7 +9,7 @@ const {
   deleteScream,
 } = require('./handlers/screams');
 
-const { signup, signin } = require('./handlers/users');
+const { signup, signin, uploadImage } = require('./handlers/users');
 
 const { validSignUp, validLogin } = require('./ultils/validate');
 
@@ -18,6 +18,7 @@ const auth = require('./ultils/auth');
 // user route
 app.post('/signup', validSignUp, signup);
 app.post('/signin', validLogin, signin);
+app.post('/user/image', auth, uploadImage);
 
 // scream route
 app.get('/screams', getAllScreams);

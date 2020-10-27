@@ -15,5 +15,6 @@
   "bugs": {
     "url": "https://github.com/DucDao0906/Full-React-Firebase-App/issues"
   },
-  "homepage": "https://github.com/DucDao0906/Full-React-Firebase-App#readme"
+  "homepage": "https://github.com/DucDao0906/Full-React-Firebase-App#readme",
+  "dependencies": {}
 }
