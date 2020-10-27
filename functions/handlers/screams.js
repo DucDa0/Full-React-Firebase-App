@@ -18,7 +18,7 @@ exports.getAllScreams = async (req, res) => {
     return res.status(200).json(screams);
   } catch (err) {
     console.error(err.message);
-    return res.status(500).json({ message: 'Server Error' });
+    return res.status(500).json({ error: 'Server Error' });
   }
 };
 
@@ -34,7 +34,7 @@ exports.createScream = async (req, res) => {
     return res.json({ message: 'Add success!' });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).json({ message: 'Server Error' });
+    return res.status(500).json({ error: 'Server Error' });
   }
 };
 
@@ -48,7 +48,7 @@ exports.editScream = async (req, res) => {
     return res.json({ message: 'Update success!' });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).json({ message: 'Server Error' });
+    return res.status(500).json({ error: 'Server Error' });
   }
 };
 
@@ -58,6 +58,6 @@ exports.deleteScream = async (req, res) => {
     return res.json({ message: 'Delete success!' });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).json({ message: 'Server Error' });
+    return res.status(500).json({ error: 'Server Error' });
   }
 };

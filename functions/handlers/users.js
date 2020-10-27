@@ -36,7 +36,7 @@ exports.signup = async (req, res) => {
     return res.status(201).json({ token });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 
@@ -58,9 +58,9 @@ exports.signin = async (req, res) => {
       err.code === 'auth/user-not-found' ||
       err.code === 'auth/wrong-password'
     ) {
-      return res.status(403).json({ message: 'Invalid credentials!' });
+      return res.status(403).json({ error: 'Invalid credentials!' });
     }
-    return res.status(500).json({ message: err.code });
+    return res.status(500).json({ error: err.code });
   }
 };
 
@@ -114,4 +114,47 @@ exports.uploadImage = (req, res) => {
       });
   });
   busboy.end(req.rawBody);
+};
+
+exports.getAuthenticatedUser = async (req, res) => {
+  let userData = {};
+  try {
+    const user = await db.doc(`/users/${req.user.doc_id}`).get();
+    if (user.exists) {
+      userData.credentials = user.data();
+    }
+    const data = await db.doc(`/likes/${req.user.doc_id}`).get();
+    userData.likes = [];
+    data.forEach((doc) => {
+      userData.likes.push(doc.data());
+    });
+
+    return res.json(userData);
+  } catch (err) {
+    return res.status(500).json({ error: err.code });
+  }
+};
+
+exports.addUserDetails = async (req, res) => {
+  const { bio, website, location } = req.body.data;
+  let userDetails = {};
+  if (bio) {
+    userDetails.bio = bio.trim();
+  }
+  if (website) {
+    if (website.trim().substring(0, 4) !== 'http') {
+      userDetails.website = `http://${website.trim()}`;
+    } else {
+      userDetails.website = website;
+    }
+  }
+  if (location) {
+    userDetails.location = location;
+  }
+  try {
+    await db.doc(`/users/${req.user.doc_id}`).update(userDetails);
+    return res.json({ message: 'Details added ok!' });
+  } catch (err) {
+    return res.status(500).json({ error: err.code });
+  }
 };

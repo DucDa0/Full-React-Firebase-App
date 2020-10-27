@@ -8,7 +8,7 @@ module.exports = (req, res, next) => {
   ) {
     token = req.headers.authorization.split('Bearer ')[1];
   } else {
-    return res.status(401).json({ message: 'No token, authorization denied' });
+    return res.status(401).json({ error: 'No token, authorization denied' });
   }
 
   admin
@@ -28,11 +28,11 @@ module.exports = (req, res, next) => {
     })
     .catch((err) => {
       if (err.code === 'auth/argument-error') {
-        return res.status(401).json({ message: 'Token is not valid' });
+        return res.status(401).json({ error: 'Token is not valid' });
       }
       if (err.code === 'auth/id-token-expired') {
-        return res.status(401).json({ message: 'Token is expired' });
+        return res.status(401).json({ error: 'Token is expired' });
       }
-      return res.status(401).json({ message: err.code });
+      return res.status(401).json({ error: err.code });
     });
 };
